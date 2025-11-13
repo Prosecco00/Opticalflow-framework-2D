@@ -1,0 +1,215 @@
+Caratteristiche principali
+
+Adapter uniformi per i modelli: RAFT, SPyNet, PWCNet, FlowNet2 (oflow2d/adapters/*).
+
+Auto-weights per RAFT + filtro dei kwargs (evita di passare ai modelli i parametri dei dataset).
+
+Inference veloce: AMP FP16 (autocast), cuDNN benchmark, prefetch dei sample, limiter (max_items/every_k/shuffle/time_budget).
+
+Dataset discovery automatico + supporto a VKITTI2 (lettura forwardFlow PNG16/float).
+
+Runner batch con calcolo metriche/valid mask, export CSV/LaTeX, “FAST vs FULL”.
+
+Utility: subset locale di FlyingChairs (copia parallela + resume), esempi di visualizzazione (flow color).
+
+Requisiti
+
+Python 3.10+ (Colab OK).
+
+PyTorch (CUDA opzionale).
+
+Dipendenze principali (vedi requirements.txt): torch, opencv-python(-headless), numpy, matplotlib, tqdm, ptlflow (per FlowNet2/PWCNet), spynet-pytorch, einops/lightning se richiesti dai tuoi adapter.
+
+Installazione rapida:
+
+pip install -r requirements.txt
+# Per PWCNet/FlowNet2 via PTLFlow:
+#   pip install ptlflow
+# Per SPyNet (niklaus):
+#   pip install spynet-pytorch
+
+
+Nota: i pesi 3D/non 2D non sono inclusi (scelta per limiti HW/tempo della tesi).
+I pesi RAFT sono auto-rilevati dal codice (vedi “Pesi modelli”).
+
+Struttura repository (essenziale)
+oflow2d-framework/
+├─ oflow2d/
+│  ├─ adapters/               # RAFT / SPyNet / PWCNet / FlowNet2
+│  └─ common/                 # metrics, viz, utils
+├─ notebooks/
+│  └─ OPTICALflow.ipynb       # notebook principale (Colab-friendly)
+├─ requirements.txt
+└─ README.md
+
+Pesi modelli
+
+RAFT: il notebook sceglie automaticamente il primo checkpoint disponibile tra:
+RAFT/models/raft-small.pth, raft-sintel.pth, raft-things.pth, raft-kitti.pth, raft-chairs.pth.
+Se assenti, verrà mostrato un messaggio: scaricali e mettili in RAFT/models/.
+
+PWCNet/FlowNet2: tramite PTLFlow (si occupa dei checkpoint).
+
+SPyNet: tramite pacchetto spynet-pytorch (modello incluso).
+
+Layout dataset attesi
+
+MPI-Sintel:
+SINTEL_ROOT/training/{final,clean} e SINTEL_ROOT/training/flow
+
+KITTI 2015:
+KITTI15_ROOT/training/image_2 + training/{flow_occ, flow_noc}
+
+FlyingChairs:
+CHAIRS_ROOT/data/*_{img1.ppm,img2.ppm,flow.flo}
+
+Virtual KITTI 2:
+VKITTI_RGB=.../vkitti_2.0.3_rgb – VKITTI_FLOW=.../vkitti_2.0.3_forwardFlow
+(flow in PNG16 stile KITTI o float/EXR → reader incluso gestisce entrambi)
+
+Se i path sono su Google Drive, il notebook esegue discovery automatica o puoi impostarli a mano.
+
+Modalità di valutazione
+1) FAST (sotto-campionamento)
+
+Usa limiter (max_items, every_k, shuffle) per correre rapidamente e avere trend comparabili.
+
+Consigliato su Drive o quando lo scopo è il confronto fra modelli, non valori finali di leaderboard.
+
+2) FULL
+
+Valuta tutti i sample (nessun limiter).
+
+Più lenta ma adatta a valori riportabili.
+
+Nel notebook trovi due orchestratori:
+
+EVAL-ALL FAST: una corsa veloci con limiti predefiniti per ogni dataset.
+
+MASTER EVAL: autodiscovery dataset → costruzione task list → run (FAST o FULL a scelta) → export.
+
+Entrambe chiamano internamente:
+
+res = run_batch_eval(model_name="RAFT", dataset_name="sintel",
+                     root=SINTEL_ROOT, pass_name="final",
+                     max_items=..., every_k=..., shuffle=...)
+
+
+Restituisce un dict con:
+EPE, Fl-all_%, AngularError_deg, FPS_median, N.
+
+Cosa fa “sotto il cofano”
+
+Adapter uniformi: ogni modello espone .infer(img1, img2) (wrapper accetta anche predict/__call__).
+
+Autocast FP16 (CUDA): i forward degli adapter sono patchati per usare torch.cuda.amp.autocast() quando possibile.
+
+Prefetch: caricamento dati su thread dedicato (_prefetch_iter), riduce idle GPU.
+
+Limiter: slicing ed early-stop basati su max_items, every_k, time_budget_sec, shuffle.
+
+Robust output parsing: _to_numpy_flow accetta dict/tensor/list e normalizza a H×W×2.
+
+Match size: il flow di output viene ridimensionato al GT con scaling dei vettori.
+
+Metriche: epe(), fl_all(), angular_error() con mask valid del dataset.
+
+Quick start (Colab)
+
+Monta Drive se usi i dataset da lì.
+
+Apri notebooks/OPTICALflow.ipynb.
+
+Esegui i blocchi F0/F1 (ottimizzazioni), DISCOVERY e poi EVAL-ALL FAST oppure MASTER EVAL.
+
+Trovi i CSV in outputs/benchmark_*.csv e la tabella LaTeX benchmark_*.tex.
+
+Esempio “leaderboard” veloce:
+
+MODELS = ["RAFT","SPyNet","PWCNet","FlowNet2"]
+# Sintel full + KITTI15 occ full + VKITTI2 fast(400) + Chairs fast(2000)
+# (vedi cella “Leaderboard” nel notebook)
+
+Visualizzazioni
+
+Qualitativo: show_examples(ds, root, ["RAFT","SPyNet",...], k=2, ...) → usa viz.flow_to_color.
+
+Single-video: puoi passare clip (senza GT) e confrontare qualitativamente i flussi; non generare metriche con GT “fittizio”.
+
+Subset locale di FlyingChairs (opzionale)
+
+C’è una utility che copia in locale un sottoinsieme dei file da Drive:
+
+copia parallela con progress bar,
+
+resume,
+
+time budget per limitare la durata,
+
+conteggio triplette create.
+Consigliata per accelerare i test su Colab.
+
+Virtual KITTI 2
+
+Reader VK-1 decodifica forwardFlow in:
+
+PNG16 stile KITTI (u,v codificati con offset/scale) → produce float32 + valid mask,
+
+float (EXR/PNG float) → assume tutto valido.
+
+Dataset VK-2 associa coppie RGB_t, RGB_{t+1} con il flow corrispondente.
+
+Output
+
+Console: tabelline per run (per-dataset/per-modello).
+
+CSV unico: outputs/benchmark_YYYYmmdd_HHMMSS.csv (una riga per run).
+
+LaTeX: pivot per dataset×modello con media metrica (EPE, Fl-all%, AE, FPS).
+
+Riproducibilità e performance
+
+Seed fissato dove utile (subset/campionamenti).
+
+CuDNN benchmark abilitato; AMP FP16; cv2.setNumThreads(0) per evitare oversubscription.
+
+“Warmup” prima del loop di misura per stabilizzare i tempi.
+
+Aggiungere un nuovo modello
+
+Crea oflow2d/adapters/<nome>_adapter.py che esponga .infer(img1,img2) (o __call__/predict) e ritorni flow in qualsiasi formato supportato da _to_numpy_flow.
+
+Registra il nome in oflow2d/adapters/__init__.py dentro make_model(...).
+
+(Opzionale) Se vuoi AMP, avvolgi il forward con torch.cuda.amp.autocast().
+
+Aggiungere un nuovo dataset
+
+Implementa una classe tipo VirtualKitti2 (ritorni (img1, img2, flow_gt, valid_mask, meta)).
+
+Aggiungi un ramo in get_dataset(name, root, subset, **dkw) con i tuoi parametri.
+
+Se c’è un formato flow particolare, fornisci un reader come read_vkitti2_flow.
+
+Modalità single-video (senza GT)
+
+Servono solo le immagini consecutive.
+
+Usa per confronto qualitativo (colormap) e FPS; non per metriche EPE/Fl-all/AE (GT inesistente).
+
+Troubleshooting
+
+“Dataset non trovato” → controlla i path stampati da DISCOVERY o imposta manualmente le variabili *_ROOT.
+
+RAFT pesi mancanti → metti i .pth in RAFT/models/ (il codice li rileva e li stampa).
+
+OOM GPU → riduci FAST, usa subset locale Chairs, disabilita AMP solo se necessario.
+
+Shape mismatch → _to_numpy_flow/_match_size gestiscono molti casi; se il tuo adapter esce con shape atipiche, uniformalo a (H,W,2) o (2,H,W).
+
+FPS fluttuanti → primo sample serve da warmup; i tempi riportati sono mediana delle iterazioni.
+
+Avvertenza su GT “fittizio”
+
+Le metriche sono significative solo su dataset con ground truth reale (Sintel/KITTI/Chairs/VKITTI2).
+Se dai in input video tuoi senza GT, puoi solo valutare qualitativamente + FPS: non confrontare EPE/Fl-all/AE con i valori dei dataset.
