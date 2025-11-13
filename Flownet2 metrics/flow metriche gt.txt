@@ -1,0 +1,40 @@
+
+=== [FlowNet2] @ KITTI15 (flow_occ, full) ===
+[KITTI15] root=/content/_kitti15_merged | flow_subdir=flow_occ  -> kept=194, fallback=0, skipped=6
+2025-11-12 17:56:28.200 | INFO     | ptlflow:restore_model:283 - Restored model state from checkpoint: things
+=== FlowNet2 @ KITTI15 (flow_occ, full) ===
+             EPE: 28.03704088741971
+        Fl-all_%: 92.0225641669727
+AngularError_deg: 42.04428417043587
+      FPS_median: 4.674683870670064
+               N: 194
+
+=== [FlowNet2] @ VKITTI2 (fast 400) ===
+[VKITTI2] RGB  files: 42522 in /content/drive/MyDrive/datasets/vkitti_2.0.3_rgb
+  es: ['Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00000.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00001.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00002.jpg']
+[VKITTI2] FLOW files: 42430 in /content/drive/MyDrive/datasets/vkitti_2.0.3_forwardFlow
+  es: ['Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00000.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00001.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00002.png']
+[VKITTI2] coppie pronte: 42519  (flow mancanti su 2 transizioni)
+  es. coppie: [('rgb_00000.jpg', 'rgb_00001.jpg', 'flow_00000.png'), ('rgb_00001.jpg', 'rgb_00002.jpg', 'flow_00001.png'), ('rgb_00002.jpg', 'rgb_00003.jpg', 'flow_00002.png')]
+2025-11-12 17:57:28.875 | INFO     | ptlflow:restore_model:283 - Restored model state from checkpoint: things
+=== FlowNet2 @ VKITTI2 (fast 400) ===
+             EPE: 23.263096787929534
+        Fl-all_%: 89.97595387582388
+AngularError_deg: 40.72787787914276
+      FPS_median: 4.615866561751112
+               N: 400
+
+=== [FlowNet2] @ FlyingChairs (fast 2000) ===
+2025-11-12 17:59:20.067 | INFO     | ptlflow:restore_model:283 - Restored model state from checkpoint: things
+                                                                  === FlowNet2 @ FlyingChairs (fast 2000) ===
+             EPE: 1.9462090476850669
+        Fl-all_%: 9.93306986485833
+AngularError_deg: 9.737848123908043
+      FPS_median: 10.26994992810381
+               N: 300
+
+--- FlowNet2 (extra) — riepilogo ---
+dataset	EPE	Fl-all_%	AngularError_deg	FPS_median	N	video_side	csv_detail
+0	FlyingChairs (fast 2000)	1.946209	9.933070	9.737848	10.269950	300	None	None
+1	KITTI15 (flow_occ, full)	28.037041	92.022564	42.044284	4.674684	194	None	None
+2	VKITTI2 (fast 400)	23.263097	89.975954	40.727878	4.615867	400	None	None

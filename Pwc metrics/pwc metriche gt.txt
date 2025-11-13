@@ -1,0 +1,50 @@
+
+=== [PWCNet] @ Sintel (final) ===
+2025-11-12 17:59:56.963 | INFO     | ptlflow:restore_model:283 - Restored model state from checkpoint: things
+=== PWCNet @ Sintel (final) ===
+             EPE: 2.4987621961728386
+        Fl-all_%: 13.938150911790682
+AngularError_deg: 11.770483742589535
+      FPS_median: 11.836646921537806
+               N: 23
+
+=== [PWCNet] @ KITTI15 (flow_occ, full) ===
+[KITTI15] root=/content/_kitti15_merged | flow_subdir=flow_occ  -> kept=194, fallback=0, skipped=6
+2025-11-12 18:00:00.581 | INFO     | ptlflow:restore_model:283 - Restored model state from checkpoint: things
+=== PWCNet @ KITTI15 (flow_occ, full) ===
+             EPE: 28.236136397135628
+        Fl-all_%: 92.36873051919282
+AngularError_deg: 42.35992553922319
+      FPS_median: 10.918360002810694
+               N: 194
+
+=== [PWCNet] @ VKITTI2 (fast 400) ===
+[VKITTI2] RGB  files: 42522 in /content/drive/MyDrive/datasets/vkitti_2.0.3_rgb
+  es: ['Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00000.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00001.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00002.jpg']
+[VKITTI2] FLOW files: 42430 in /content/drive/MyDrive/datasets/vkitti_2.0.3_forwardFlow
+  es: ['Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00000.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00001.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00002.png']
+[VKITTI2] coppie pronte: 42519  (flow mancanti su 2 transizioni)
+  es. coppie: [('rgb_00000.jpg', 'rgb_00001.jpg', 'flow_00000.png'), ('rgb_00001.jpg', 'rgb_00002.jpg', 'flow_00001.png'), ('rgb_00002.jpg', 'rgb_00003.jpg', 'flow_00002.png')]
+2025-11-12 18:00:37.464 | INFO     | ptlflow:restore_model:283 - Restored model state from checkpoint: things
+=== PWCNet @ VKITTI2 (fast 400) ===
+             EPE: 23.896202858686447
+        Fl-all_%: 90.4333115240325
+AngularError_deg: 41.23974370956421
+      FPS_median: 10.561047111280448
+               N: 400
+
+=== [PWCNet] @ FlyingChairs (fast 2000) ===
+2025-11-12 18:01:40.288 | INFO     | ptlflow:restore_model:283 - Restored model state from checkpoint: things
+                                                                === PWCNet @ FlyingChairs (fast 2000) ===
+             EPE: 2.2475200939178466
+        Fl-all_%: 11.566023084793603
+AngularError_deg: 11.645559285879136
+      FPS_median: 20.792088359581378
+               N: 300
+
+--- PWC: riepilogo metriche ---
+dataset	EPE	Fl-all_%	AngularError_deg	FPS_median	N	video_side	csv_detail
+0	FlyingChairs (fast 2000)	2.247520	11.566023	11.645559	20.792088	300	None	None
+1	KITTI15 (flow_occ, full)	28.236136	92.368731	42.359926	10.918360	194	None	None
+2	Sintel (final)	2.498762	13.938151	11.770484	11.836647	23	None	None
+3	VKITTI2 (fast 400)	23.896203	90.433312	41.239744	10.561047	400	None	None
