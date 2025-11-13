@@ -20,15 +20,6 @@ PyTorch (CUDA opzionale).
 
 Dipendenze principali (vedi requirements.txt): torch, opencv-python(-headless), numpy, matplotlib, tqdm, ptlflow (per FlowNet2/PWCNet), spynet-pytorch, einops/lightning se richiesti dai tuoi adapter.
 
-Installazione rapida:
-
-pip install -r requirements.txt
-# Per PWCNet/FlowNet2 via PTLFlow:
-#   pip install ptlflow
-# Per SPyNet (niklaus):
-#   pip install spynet-pytorch
-
-
 Nota: i pesi 3D/non 2D non sono inclusi (scelta per limiti HW/tempo della tesi).
 I pesi RAFT sono auto-rilevati dal codice (vedi “Pesi modelli”).
 
@@ -213,3 +204,6 @@ Avvertenza su GT “fittizio”
 
 Le metriche sono significative solo su dataset con ground truth reale (Sintel/KITTI/Chairs/VKITTI2).
 Se dai in input video tuoi senza GT, puoi solo valutare qualitativamente + FPS: non confrontare EPE/Fl-all/AE con i valori dei dataset.
+
+Alcune celle non vanno alla prima esecuzione, dopo aver eseguito i fixer come ad esempio per Vkitti2 e Kitti15 dopo va tutto liscio.
+Lavoro fatto esclusivamento su Colab
