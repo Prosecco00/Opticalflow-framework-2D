@@ -1,0 +1,52 @@
+✓ Virtual KITTI 2 trovato: run FAST (max 400 sample)
+[VKITTI2] RGB  files: 42522 in /content/drive/MyDrive/datasets/vkitti_2.0.3_rgb
+  es: ['Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00000.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00001.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00002.jpg']
+[VKITTI2] FLOW files: 42430 in /content/drive/MyDrive/datasets/vkitti_2.0.3_forwardFlow
+  es: ['Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00000.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00001.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00002.png']
+[VKITTI2] coppie pronte: 42519  (flow mancanti su 2 transizioni)
+  es. coppie: [('rgb_00000.jpg', 'rgb_00001.jpg', 'flow_00000.png'), ('rgb_00001.jpg', 'rgb_00002.jpg', 'flow_00001.png'), ('rgb_00002.jpg', 'rgb_00003.jpg', 'flow_00002.png')]
+[get_model] RAFT weights: /content/RAFT/models/raft-small.pth  | small=True
+=== RAFT @ VKITTI2 (400) ===
+             EPE: 18.18082725968212
+        Fl-all_%: 81.84921727534815
+AngularError_deg: 48.87184624910355
+      FPS_median: 14.626377894398559
+               N: 400
+[VKITTI2] RGB  files: 42522 in /content/drive/MyDrive/datasets/vkitti_2.0.3_rgb
+  es: ['Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00000.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00001.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00002.jpg']
+[VKITTI2] FLOW files: 42430 in /content/drive/MyDrive/datasets/vkitti_2.0.3_forwardFlow
+  es: ['Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00000.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00001.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00002.png']
+[VKITTI2] coppie pronte: 42519  (flow mancanti su 2 transizioni)
+  es. coppie: [('rgb_00000.jpg', 'rgb_00001.jpg', 'flow_00000.png'), ('rgb_00001.jpg', 'rgb_00002.jpg', 'flow_00001.png'), ('rgb_00002.jpg', 'rgb_00003.jpg', 'flow_00002.png')]
+=== SPyNet @ VKITTI2 (400) ===
+             EPE: 13.31465254843235
+        Fl-all_%: 72.58566552056625
+AngularError_deg: 70.47088470458985
+      FPS_median: 12.891806659149548
+               N: 400
+[VKITTI2] RGB  files: 42522 in /content/drive/MyDrive/datasets/vkitti_2.0.3_rgb
+  es: ['Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00000.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00001.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00002.jpg']
+[VKITTI2] FLOW files: 42430 in /content/drive/MyDrive/datasets/vkitti_2.0.3_forwardFlow
+  es: ['Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00000.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00001.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00002.png']
+[VKITTI2] coppie pronte: 42519  (flow mancanti su 2 transizioni)
+  es. coppie: [('rgb_00000.jpg', 'rgb_00001.jpg', 'flow_00000.png'), ('rgb_00001.jpg', 'rgb_00002.jpg', 'flow_00001.png'), ('rgb_00002.jpg', 'rgb_00003.jpg', 'flow_00002.png')]
+2025-11-12 16:14:08.818 | INFO     | ptlflow:restore_model:283 - Restored model state from checkpoint: things
+=== PWCNet @ VKITTI2 (400) ===
+             EPE: 20.543647585883736
+        Fl-all_%: 81.95639126526095
+AngularError_deg: 43.39379097700119
+      FPS_median: 9.248853080217426
+               N: 400
+[VKITTI2] RGB  files: 42522 in /content/drive/MyDrive/datasets/vkitti_2.0.3_rgb
+  es: ['Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00000.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00001.jpg', 'Scene01/15-deg-left/frames/rgb/Camera_0/rgb_00002.jpg']
+[VKITTI2] FLOW files: 42430 in /content/drive/MyDrive/datasets/vkitti_2.0.3_forwardFlow
+  es: ['Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00000.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00001.png', 'Scene01/15-deg-left/frames/forwardFlow/Camera_0/flow_00002.png']
+[VKITTI2] coppie pronte: 42519  (flow mancanti su 2 transizioni)
+  es. coppie: [('rgb_00000.jpg', 'rgb_00001.jpg', 'flow_00000.png'), ('rgb_00001.jpg', 'rgb_00002.jpg', 'flow_00001.png'), ('rgb_00002.jpg', 'rgb_00003.jpg', 'flow_00002.png')]
+2025-11-12 16:29:07.457 | INFO     | ptlflow:restore_model:283 - Restored model state from checkpoint: things
+                                                                   === FlowNet2 @ VKITTI2 (400) ===
+             EPE: 19.562241387143732
+        Fl-all_%: 81.81539400562869
+AngularError_deg: 44.30899670362473
+      FPS_median: 3.7495074510195403
+               N: 400
