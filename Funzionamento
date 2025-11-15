@@ -30,7 +30,6 @@ oflow2d-framework/
 │  └─ common/                 # metrics, viz, utils
 ├─ notebooks/
 │  └─ OPTICALflow.ipynb       # notebook principale (Colab-friendly)
-├─ requirements.txt
 └─ README.md
 
 Pesi modelli
