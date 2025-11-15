@@ -1,208 +1,364 @@
+Funzionamento framework Optical Flow 2D + applicazione traffico
+===================================================
+
 Caratteristiche principali
-
-Adapter uniformi per i modelli: RAFT, SPyNet, PWCNet, FlowNet2 (oflow2d/adapters/*).
-
-Auto-weights per RAFT + filtro dei kwargs (evita di passare ai modelli i parametri dei dataset).
-
-Inference veloce: AMP FP16 (autocast), cuDNN benchmark, prefetch dei sample, limiter (max_items/every_k/shuffle/time_budget).
-
-Dataset discovery automatico + supporto a VKITTI2 (lettura forwardFlow PNG16/float).
-
-Runner batch con calcolo metriche/valid mask, export CSV/LaTeX, “FAST vs FULL”.
-
-Utility: subset locale di FlyingChairs (copia parallela + resume), esempi di visualizzazione (flow color).
+--------------------------
+- Adapter uniformi per i modelli: RAFT, SPyNet, PWC-Net, FlowNet2 (cartella: oflow2d/adapters/*).
+- Selezione automatica dei pesi per RAFT + filtro dei kwargs (evita di passare ai modelli parametri specifici dei dataset).
+- Inference veloce: AMP FP16 (autocast), cuDNN benchmark, prefetch dei sample, limiter (max_items / every_k / shuffle / time_budget).
+- Dataset discovery automatico + supporto a Virtual KITTI 2 (lettura forwardFlow in PNG16 stile KITTI o float/EXR).
+- Runner batch per benchmark con:
+  - calcolo metriche (EPE, Fl-all%, Angular Error),
+  - gestione delle valid mask,
+  - export CSV e LaTeX,
+  - modalità “FAST” vs “FULL”.
+- Utility: subset locale di FlyingChairs (copia parallela da Drive con resume e time budget), visualizzazioni qualitative con flow color.
+- Notebook applicativo per “Vehicle Speed Estimation”: stima della velocità media dei veicoli per corsia su un video reale, usando LK e i modelli deep del framework (RAFT, FlowNet2, PWC-Net, SPyNet).
 
 Requisiti
-
-Python 3.10+ (Colab OK).
-
-PyTorch (CUDA opzionale).
-
-Dipendenze principali (vedi requirements.txt): torch, opencv-python(-headless), numpy, matplotlib, tqdm, ptlflow (per FlowNet2/PWCNet), spynet-pytorch, einops/lightning se richiesti dai tuoi adapter.
-
-Nota: i pesi 3D/non 2D non sono inclusi (scelta per limiti HW/tempo della tesi).
-I pesi RAFT sono auto-rilevati dal codice (vedi “Pesi modelli”).
+---------
+- Python 3.10+ (ottimizzato per Google Colab).
+- PyTorch con supporto CUDA (fortemente consigliato per i modelli deep).
+- Dipendenze principali (vedi requirements.txt):
+  - torch, torchvision
+  - opencv-python(-headless)
+  - numpy, matplotlib, tqdm
+  - ptlflow (per FlowNet2/PWC-Net, se usato)
+  - spynet-pytorch
+  - eventuali einops/lightning richiesti dagli adapter.
+- I pesi di modelli 3D/non 2D non sono inclusi (scelta per limiti HW).
+- I pesi RAFT vengono auto-rilevati dal codice (vedi sezione “Pesi modelli”).
 
 Struttura repository (essenziale)
+---------------------------------
 oflow2d-framework/
 ├─ oflow2d/
-│  ├─ adapters/               # RAFT / SPyNet / PWCNet / FlowNet2
+│  ├─ adapters/               # RAFT / SPyNet / PWC-Net / FlowNet2
 │  └─ common/                 # metrics, viz, utils
-├─ notebooks/
-│  └─ OPTICALflow.ipynb       # notebook principale (Colab-friendly)
+|
+├─ ─ OPTICALflow 2D e tracciamento.ipynb     # notebook principale ed esteso con vehicle speed estimation
+│                            
 └─ README.md
 
 Pesi modelli
+------------
+RAFT:
+- Il notebook sceglie automaticamente il primo checkpoint disponibile tra:
+  RAFT/models/raft-small.pth, raft-sintel.pth, raft-things.pth, raft-kitti.pth, raft-chairs.pth.
+- Se non trova nulla viene mostrato un messaggio esplicito: scaricare i pesi e copiarli in RAFT/models/.
 
-RAFT: il notebook sceglie automaticamente il primo checkpoint disponibile tra:
-RAFT/models/raft-small.pth, raft-sintel.pth, raft-things.pth, raft-kitti.pth, raft-chairs.pth.
-Se assenti, verrà mostrato un messaggio: scaricali e mettili in RAFT/models/.
+PWC-Net / FlowNet2:
+- Gestiti tramite PTLFlow o adapter dedicato.
+- Il path del checkpoint (es. FlowNet2_checkpoint.pth.tar) viene passato all’adapter.
 
-PWCNet/FlowNet2: tramite PTLFlow (si occupa dei checkpoint).
+SPyNet:
+- Utilizza il pacchetto spynet-pytorch (modello pre-addestrato incluso).
 
-SPyNet: tramite pacchetto spynet-pytorch (modello incluso).
-
-Layout dataset attesi
-
+Layout dataset attesi (benchmark)
+---------------------------------
 MPI-Sintel:
-SINTEL_ROOT/training/{final,clean} e SINTEL_ROOT/training/flow
+- SINTEL_ROOT/training/{final,clean}
+- SINTEL_ROOT/training/flow
 
-KITTI 2015:
-KITTI15_ROOT/training/image_2 + training/{flow_occ, flow_noc}
+KITTI 2015 (optical flow):
+- KITTI15_ROOT/training/image_2
+- KITTI15_ROOT/training/{flow_occ, flow_noc}
 
 FlyingChairs:
-CHAIRS_ROOT/data/*_{img1.ppm,img2.ppm,flow.flo}
+- CHAIRS_ROOT/data/*_{img1.ppm,img2.ppm,flow.flo}
 
 Virtual KITTI 2:
-VKITTI_RGB=.../vkitti_2.0.3_rgb – VKITTI_FLOW=.../vkitti_2.0.3_forwardFlow
-(flow in PNG16 stile KITTI o float/EXR → reader incluso gestisce entrambi)
+- VKITTI_RGB  = .../vkitti_2.0.3_rgb
+- VKITTI_FLOW = .../vkitti_2.0.3_forwardFlow
+  (flow in PNG16 stile KITTI o float/EXR → reader incluso gestisce entrambi)
 
-Se i path sono su Google Drive, il notebook esegue discovery automatica o puoi impostarli a mano.
+Se i path sono su Google Drive, il notebook prova una discovery automatica su /content/drive/MyDrive/...;
+in alternativa possono essere impostati manualmente nelle celle iniziali.
 
-Modalità di valutazione
+Modalità di valutazione (benchmark)
+-----------------------------------
 1) FAST (sotto-campionamento)
-
-Usa limiter (max_items, every_k, shuffle) per correre rapidamente e avere trend comparabili.
-
-Consigliato su Drive o quando lo scopo è il confronto fra modelli, non valori finali di leaderboard.
+- Usa il limiter (max_items, every_k, shuffle, time_budget_sec) per correre rapidamente e ottenere trend comparabili tra modelli.
+- Consigliata quando:
+  - i dataset sono su Drive,
+  - serve un confronto veloce tra modelli (non numeri “definitivi” da tesi).
 
 2) FULL
+- Valuta tutti i sample del dataset (nessun limiter).
+- Più lenta, ma adatta a riportare numeri finali nella tesi (Sintel, KITTI15, Chairs, VKITTI2).
 
-Valuta tutti i sample (nessun limiter).
+Orchestratori nel notebook benchmark
+------------------------------------
+EVAL-ALL FAST:
+- Esegue una “corsa veloce” con limiti predefiniti sulle combinazioni dataset×modello.
+- Utile per avere una leaderboard provvisoria.
 
-Più lenta ma adatta a valori riportabili.
+MASTER EVAL:
+- Esegue autodiscovery dei dataset disponibili.
+- Costruisce automaticamente la task list (dataset × modello).
+- Lancia le run in modalità FAST o FULL.
+- Esporta i risultati in CSV e LaTeX.
 
-Nel notebook trovi due orchestratori:
+Entrambi gli orchestratori chiamano internamente funzioni del tipo:
 
-EVAL-ALL FAST: una corsa veloci con limiti predefiniti per ogni dataset.
+res = run_batch_eval(
+    model_name="RAFT",
+    dataset_name="sintel",
+    root=SINTEL_ROOT,
+    pass_name="final",
+    max_items=...,
+    every_k=...,
+    shuffle=...
+)
 
-MASTER EVAL: autodiscovery dataset → costruzione task list → run (FAST o FULL a scelta) → export.
+res è un dict con:
+- EPE
+- Fl-all_%
+- AngularError_deg
+- FPS_median
+- N (numero di campioni valutati)
 
-Entrambe chiamano internamente:
+Implementazione interna (benchmark)
+-----------------------------------
+- Adapter uniformi:
+  ogni modello espone un’inferenza standard (infer/__call__/predict). _to_numpy_flow accetta dict/tensor/list
+  e normalizza sempre a un array H×W×2.
+- Autocast FP16 (CUDA):
+  i forward degli adapter deep sono avvolti in torch.cuda.amp.autocast() quando è disponibile la GPU.
+- Prefetch:
+  wrapper _prefetch_iter che sposta i sample al device in anticipo, riducendo idle GPU.
+- Limiter:
+  slicing ed early-stop basati su max_items, every_k, shuffle, time_budget_sec.
+- Match size:
+  se il modello restituisce flow a risoluzione diversa dal GT, il campo viene ridimensionato e i vettori scalati
+  in modo coerente.
+- Metriche:
+  implementazioni di epe(), fl_all(), angular_error() con le valid mask specifiche del dataset.
 
-res = run_batch_eval(model_name="RAFT", dataset_name="sintel",
-                     root=SINTEL_ROOT, pass_name="final",
-                     max_items=..., every_k=..., shuffle=...)
+Quick start (Colab, parte benchmark)
+------------------------------------
+1) Montare Google Drive se i dataset sono su MyDrive.
+2) Aprire notebooks/OPTICALflow.ipynb.
+3) Eseguire in ordine:
+   - celle F0/F1 (ottimizzazioni e setup),
+   - cella DISCOVERY per la ricerca automatica dei dataset,
+   - EVAL-ALL FAST oppure MASTER EVAL.
+4) I risultati vengono salvati in:
+   - outputs/benchmark_*.csv (una riga per run),
+   - outputs/benchmark_*.tex (tabella LaTeX già pivotata).
 
-
-Restituisce un dict con:
-EPE, Fl-all_%, AngularError_deg, FPS_median, N.
-
-Cosa fa “sotto il cofano”
-
-Adapter uniformi: ogni modello espone .infer(img1, img2) (wrapper accetta anche predict/__call__).
-
-Autocast FP16 (CUDA): i forward degli adapter sono patchati per usare torch.cuda.amp.autocast() quando possibile.
-
-Prefetch: caricamento dati su thread dedicato (_prefetch_iter), riduce idle GPU.
-
-Limiter: slicing ed early-stop basati su max_items, every_k, time_budget_sec, shuffle.
-
-Robust output parsing: _to_numpy_flow accetta dict/tensor/list e normalizza a H×W×2.
-
-Match size: il flow di output viene ridimensionato al GT con scaling dei vettori.
-
-Metriche: epe(), fl_all(), angular_error() con mask valid del dataset.
-
-Quick start (Colab)
-
-Monta Drive se usi i dataset da lì.
-
-Apri notebooks/OPTICALflow.ipynb.
-
-Esegui i blocchi F0/F1 (ottimizzazioni), DISCOVERY e poi EVAL-ALL FAST oppure MASTER EVAL.
-
-Trovi i CSV in outputs/benchmark_*.csv e la tabella LaTeX benchmark_*.tex.
-
-Esempio “leaderboard” veloce:
-
-MODELS = ["RAFT","SPyNet","PWCNet","FlowNet2"]
-# Sintel full + KITTI15 occ full + VKITTI2 fast(400) + Chairs fast(2000)
-# (vedi cella “Leaderboard” nel notebook)
-
-Visualizzazioni
-
-Qualitativo: show_examples(ds, root, ["RAFT","SPyNet",...], k=2, ...) → usa viz.flow_to_color.
-
-Single-video: puoi passare clip (senza GT) e confrontare qualitativamente i flussi; non generare metriche con GT “fittizio”.
+Visualizzazioni (benchmark)
+---------------------------
+- Qualitativo:
+  show_examples(ds, root, ["RAFT","SPyNet","FlowNet2","PWCNet"], k=2, ...)
+  mostra immagine, GT flow e flussi stimati usando viz.flow_to_color.
+- Single-video:
+  possibile passare clip senza GT per confronto qualitativo tra modelli e misura degli FPS.
+  Non ha senso calcolare EPE/Fl-all/AE con GT “fittizio”.
 
 Subset locale di FlyingChairs (opzionale)
+-----------------------------------------
+Utility per copiare un sottoinsieme del dataset da Drive a /content:
+- copia parallela con progress bar,
+- resume se l’esecuzione viene interrotta,
+- time_budget_sec per limitare la durata,
+- conteggio delle triplette copiate.
+Consigliata per accelerare i test in modalità FAST su Colab.
 
-C’è una utility che copia in locale un sottoinsieme dei file da Drive:
+Virtual KITTI 2 (reader)
+------------------------
+Il reader VK gestisce:
+- PNG16 stile KITTI:
+  u,v codificati con offset/scale → ritorna flow float32 + valid mask.
+- Formati float (EXR/PNG float):
+  considera tutti i pixel validi.
 
-copia parallela con progress bar,
+Il dataset associa in modo consistente:
+- RGB_t
+- RGB_{t+1}
+- flow_gt
+- valid_mask + metadati
 
-resume,
 
-time budget per limitare la durata,
-
-conteggio triplette create.
-Consigliata per accelerare i test su Colab.
-
-Virtual KITTI 2
-
-Reader VK-1 decodifica forwardFlow in:
-
-PNG16 stile KITTI (u,v codificati con offset/scale) → produce float32 + valid mask,
-
-float (EXR/PNG float) → assume tutto valido.
-
-Dataset VK-2 associa coppie RGB_t, RGB_{t+1} con il flow corrispondente.
-
-Output
-
-Console: tabelline per run (per-dataset/per-modello).
-
-CSV unico: outputs/benchmark_YYYYmmdd_HHMMSS.csv (una riga per run).
-
-LaTeX: pivot per dataset×modello con media metrica (EPE, Fl-all%, AE, FPS).
+Output benchmark
+----------------
+- Console:
+  tabelline per ogni run (dataset × modello).
+- CSV:
+  outputs/benchmark_YYYYmmdd_HHMMSS.csv (una riga per run).
+- LaTeX:
+  tabella pivotata dataset×modello con medie di EPE / Fl-all% / AE / FPS.
 
 Riproducibilità e performance
-
-Seed fissato dove utile (subset/campionamenti).
-
-CuDNN benchmark abilitato; AMP FP16; cv2.setNumThreads(0) per evitare oversubscription.
-
-“Warmup” prima del loop di misura per stabilizzare i tempi.
+-----------------------------
+- Seed fissato dove utile (subset, campionamenti).
+- torch.backends.cudnn.benchmark = True.
+- Uso di AMP FP16 su GPU.
+- cv2.setNumThreads(0) per evitare oversubscription.
+- Primo sample usato come “warmup”; FPS riportati come mediana sul loop.
 
 Aggiungere un nuovo modello
-
-Crea oflow2d/adapters/<nome>_adapter.py che esponga .infer(img1,img2) (o __call__/predict) e ritorni flow in qualsiasi formato supportato da _to_numpy_flow.
-
-Registra il nome in oflow2d/adapters/__init__.py dentro make_model(...).
-
-(Opzionale) Se vuoi AMP, avvolgi il forward con torch.cuda.amp.autocast().
+---------------------------
+1) Creare oflow2d/adapters/<nome>_adapter.py che esponga infer(img1,img2) o __call__.
+2) Garantire che l’output sia convertibile da _to_numpy_flow in H×W×2 (o (2,H,W)).
+3) Registrare il modello in oflow2d/adapters/__init__.py nella funzione make_model(...).
+4) (Opzionale) Avvolgere il forward con torch.cuda.amp.autocast() per usare AMP.
 
 Aggiungere un nuovo dataset
-
-Implementa una classe tipo VirtualKitti2 (ritorni (img1, img2, flow_gt, valid_mask, meta)).
-
-Aggiungi un ramo in get_dataset(name, root, subset, **dkw) con i tuoi parametri.
-
-Se c’è un formato flow particolare, fornisci un reader come read_vkitti2_flow.
+---------------------------
+1) Implementare una classe dataset che ritorni tuple del tipo:
+   (img1, img2, flow_gt, valid_mask, meta).
+2) Aggiungere un ramo in get_dataset(name, root, subset, **dkw).
+3) Se il formato del flow è custom, fornire un reader dedicato (sullo stile di read_vkitti2_flow).
 
 Modalità single-video (senza GT)
+--------------------------------
+- Richiede solo una sequenza di frame (video o immagini).
+- Utilizzi principali:
+  - confronto qualitativo dei flussi,
+  - misura FPS,
+  - applicazioni derivate (es. vehicle speed estimation).
+- Le metriche EPE/Fl-all/AE non sono significative in assenza di GT reale.
 
-Servono solo le immagini consecutive.
+Avvertenza su GT inesistente
+----------------------------
+Le metriche di accuratezza (EPE, Fl-all, Angular Error) hanno senso solo su dataset con ground truth reale
+(Sintel, KITTI15, Chairs, VKITTI2).
+Su video personali vanno usati solo:
+- confronti qualitativi,
+- FPS,
+- eventuali metriche derivate (es. velocità), ma senza confrontare con valori di benchmark ufficiali.
 
-Usa per confronto qualitativo (colormap) e FPS; non per metriche EPE/Fl-all/AE (GT inesistente).
+------------------------------------------------------------
+PARTE NUOVA – Vehicle Speed Estimation (OPTICALflow 2D e tracciamento.ipynb)
+------------------------------------------------------------
 
-Troubleshooting
+Obiettivo applicazione traffico
+-------------------------------
+Applicazione reale di optical flow su un video di traffico (es. traffico4.mp4):
+- stimare la velocità media dei veicoli per corsia (lane_1, lane_2, lane_3);
+- confrontare la baseline Lucas–Kanade (LK) con i modelli deep del framework:
+  RAFT, FlowNet2, PWC-Net, SPyNet.
 
-“Dataset non trovato” → controlla i path stampati da DISCOVERY o imposta manualmente le variabili *_ROOT.
+Definizione delle corsie e calibrazione px→m
+--------------------------------------------
+Sul primo frame del video vengono definite manualmente tre ROI poligonali che approssimano
+le corsie della carreggiata:
+- lane_1: corsia di sinistra (più interna, in media più veloce),
+- lane_2: corsia centrale,
+- lane_3: corsia di destra (nel video usato è quasi sempre vuota).
 
-RAFT pesi mancanti → metti i .pth in RAFT/models/ (il codice li rileva e li stampa).
+Ogni lane è rappresentata da un dict:
+- name: "lane_1" / "lane_2" / "lane_3"
+- polygon: array di vertici (x,y) in pixel
+- px2m: fattore di conversione metri/pixel
 
-OOM GPU → riduci FAST, usa subset locale Chairs, disabilita AMP solo se necessario.
+La calibrazione metrico-pixel è basata sull’ipotesi:
+- larghezza reale corsia ≈ 3.5 m
 
-Shape mismatch → _to_numpy_flow/_match_size gestiscono molti casi; se il tuo adapter esce con shape atipiche, uniformalo a (H,W,2) o (2,H,W).
+Si misura la larghezza in pixel del bordo più vicino del poligono (Δx_px) e si calcola:
+px2m = 3.5 / Δx_px  [m/pixel]
 
-FPS fluttuanti → primo sample serve da warmup; i tempi riportati sono mediana delle iterazioni.
+Questo fattore viene usato per tutte le stime di velocità di quella corsia.
 
-Avvertenza su GT “fittizio”
+Pipeline di stima della velocità (comune ai metodi)
+---------------------------------------------------
+Per ogni coppia di frame consecutivi (I_t, I_{t+1}):
 
-Le metriche sono significative solo su dataset con ground truth reale (Sintel/KITTI/Chairs/VKITTI2).
-Se dai in input video tuoi senza GT, puoi solo valutare qualitativamente + FPS: non confrontare EPE/Fl-all/AE con i valori dei dataset.
+1) Corner detection sul frame precedente:
+   - si estraggono corner con cv2.goodFeaturesToTrack (Shi–Tomasi);
+   - i punti cadono tipicamente sui bordi dei veicoli e sulle linee di corsia.
 
-Alcune celle non vanno alla prima esecuzione, dopo aver eseguito i fixer come ad esempio per Vkitti2 e Kitti15 dopo va tutto liscio.
-Lavoro fatto esclusivamento su Colab
+2) Assegnazione alla corsia:
+   - per ogni corner (x,y) si verifica in quale poligono cade (funzione lane_for_point con cv2.pointPolygonTest);
+   - solo i punti interni a una lane vengono considerati per quella corsia.
+
+3) Lettura del vettore di flusso:
+   - LK:
+     usa calcOpticalFlowPyrLK per ottenere direttamente lo spostamento (dx,dy) dei corner dal frame precedente al successivo.
+   - RAFT / FlowNet2 / PWC-Net / SPyNet:
+     - si calcola il flusso denso tra I_t e I_{t+1};
+     - per ogni corner si campiona il vettore (u,v) nel campo di flusso;
+     - se il modello opera a risoluzione ridotta rispetto al video:
+       - si usano fattori di scala immagine→flow e flow→immagine per riportare lo spostamento in pixel “immagine”.
+
+4) Filtraggio del movimento minimo:
+   - si scartano i vettori con norma < MIN_MOTION_PX (ad esempio 0.5 px/frame) per eliminare jitter e rumore.
+
+5) Velocità per frame e per corsia:
+   - per ogni lane si raccolgono le distanze in pixel dei corner validi;
+   - se il numero di punti è ≥ MIN_POINTS_FRAME:
+     si calcola la velocità istantanea:
+       v_frame = mediana_i( |d_i|_px * px2m * fps ) * 3.6   [km/h]
+   - se i punti sono troppo pochi, la velocità del frame è impostata a 0 km/h (corsia considerata vuota).
+
+6) Filtro temporale (EMA):
+   - per migliorare la stabilità visiva, la velocità mostrata nel video è filtrata con una media mobile esponenziale:
+     v_hat_t = alpha * v_hat_{t-1} + (1-alpha) * v_frame
+   - tipicamente alpha ≈ 0.7.
+
+7) Overlay video:
+   - per ogni metodo (LK, RAFT, FlowNet2, PWC-Net, SPyNet) si genera un video MP4 con:
+     - poligoni delle corsie disegnati in verde;
+     - testi con le velocità correnti per lane (es. "lane_1: 68.3 km/h (RAFT v2)");
+     - aggiornamento frame-per-frame.
+
+Modelli confrontati nella pipeline traffico
+-------------------------------------------
+- Lucas–Kanade (LK):
+  baseline classica, implementata con corner + calcOpticalFlowPyrLK.
+- RAFT:
+  modello deep denso SOTA, integrato tramite RAFTAdapter con auto-selezione dei pesi.
+- FlowNet2:
+  rete fully convolutional per optical flow, caricata tramite adapter dedicato e checkpoint pubblico.
+- PWC-Net:
+  modello piramidale (warp + cost volume), integrato nel framework con adapter dedicato.
+- SPyNet:
+  modello leggero basato su piramide; usato come confronto con un metodo deep più semplice e compatto.
+
+Risultati principali (video traffico4)
+--------------------------------------
+Sulla clip traffico4.mp4, per le corsie lane_1 (più interna) e lane_2 (centrale), le velocità medie
+risultano (valori indicativi):
+
+- LK:
+  ~71 km/h (lane_1), ~52 km/h (lane_2)
+- RAFT:
+  ~57 km/h (lane_1), ~39 km/h (lane_2)
+- FlowNet2:
+  ~68 km/h (lane_1), ~50 km/h (lane_2)
+- PWC-Net:
+  ~66 km/h (lane_1), ~48 km/h (lane_2)
+- SPyNet:
+  ~5 km/h (lane_1), ~5 km/h (lane_2)
+
+Osservazioni:
+- Tutti i metodi “forti” (LK, FlowNet2, PWC-Net, RAFT) riconoscono:
+  - lane_1 più veloce di lane_2;
+  - velocità plausibili per un tratto di superstrada (40–70 km/h).
+- LK, FlowNet2 e PWC-Net forniscono stime molto simili tra loro.
+- RAFT tende a sottostimare leggermente l’entità del moto (~10–15 km/h in meno), ma conserva la struttura relativa tra corsie.
+- SPyNet sottostima pesantemente la velocità (≈5 km/h quasi costanti) ed è quindi inadeguato come
+  stimatore assoluto di velocità, ma utile come caso negativo nel confronto.
+
+Output applicazione traffico
+----------------------------
+- Video overlay per ogni modello:
+  - traffico4_LK_overlay_v2.mp4
+  - traffico4_RAFT_overlay_v2.mp4
+  - traffico4_FLOWNET2_overlay_v2.mp4
+  - traffico4_PWCNET_overlay_v2.mp4
+  - traffico4_SPYNET_overlay_v2.mp4
+
+- Tabelle:
+  - velocità medie/minime/massime per corsia e modello,
+  - numero di frame “validi” per ciascuna corsia.
+
+- Grafici:
+  - bar chart con le velocità medie per lane_1 e lane_2 per tutti i modelli (LK, RAFT, FlowNet2, PWC-Net, SPyNet).
+
+Note finali
+-----------
+- Alcune celle possono fallire alla prima esecuzione (es. setup VKITTI2/KITTI15); dopo aver eseguito i fixer
+  dedicati, le run successive risultano stabili.
+- L’intero lavoro è stato progettato e testato principalmente su Google Colab con GPU NVIDIA disponibile.
